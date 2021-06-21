@@ -1,3 +1,4 @@
+from django.db.models import Max
 from django.shortcuts import render
 
 # Create your views here.
@@ -5,8 +6,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from sellgoAPI.models import Customer,CsvProduct
-from sellgoAPI.serializers import CustomerSerializer,CsvProductSerializer
+from sellgoAPI.models import Customer, CsvProduct
+from sellgoAPI.serializers import CustomerSerializer, CsvProductSerializer
 from .csvutils import csvToModel
 
 
@@ -64,33 +65,34 @@ def uploadcsv(request):
     except Exception as e:
         message = str( e )
         return Response( message, status=status.HTTP_500_INTERNAL_SERVER_ERROR )
-    return Response(f"{count} Products added Successfully" , status.HTTP_201_CREATED)
+    return Response( f"{count} Products added Successfully", status.HTTP_201_CREATED )
 
 
 @api_view( ['GET'] )
 def getproductBycustomer(request):
     try:
         customer_id = request.POST['customer_id']
-        CustomerObj = Customer.objects.get(id=customer_id)
-        distinct_count = CsvProduct.objects.filter(customer_id=customer_id).values_list('title').distinct().count()
-        Products = CsvProduct.objects.filter(customer_id=customer_id).order_by('-uploaded_date','title')\
-            .values('id','title','price','uploaded_date')[:distinct_count]
-        product = {
-            'id',
-            'title',
-            'price',
-            'uploaded_date'
-        }
-        context={
-            "Customer":{
-                "name" : CustomerObj.name,
-                "id":CustomerObj.id
+        CustomerObj = Customer.objects.get( id=customer_id )
+        query = f' select id, title, price, uploaded_date, customer_id, max(uploaded_date) from sellgoAPI_csvproduct p where customer_id={customer_id} group by title;'
+        Products = CsvProduct.objects.raw( query )
+        projevtlist = []
+        for i in Products:
+            projevtlist.append( {
+                'id': i.id,
+                'title': i.title,
+                'price': i.price,
+                'uploaded_date': i.uploaded_date,
+            } )
+        context = {
+            "Customer": {
+                "name": CustomerObj.name,
+                "id": CustomerObj.id
             },
-            "Products":Products
+            "Products": projevtlist
         }
-        return Response(context,status.HTTP_200_OK)
+        return Response( context, status.HTTP_200_OK )
     except Exception as e:
         message = str( e )
-        print(message)
+        print( message )
         httpStatus = status.HTTP_404_NOT_FOUND
         return Response( message, status=httpStatus )

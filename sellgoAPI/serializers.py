@@ -9,7 +9,7 @@ class CustomerSerializer( serializers.ModelSerializer ):
 
 
 class CsvProductSerializer( serializers.ModelSerializer ):
-    customer = CustomerSerializer( many=True )
+    #customer = CustomerSerializer( many=True )
 
     class Meta:
         model = CsvProduct
