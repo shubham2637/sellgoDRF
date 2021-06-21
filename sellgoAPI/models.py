@@ -19,5 +19,8 @@ class CsvProduct(models.Model):
     customer = models.ForeignKey(to=Customer,on_delete=models.PROTECT)
     uploaded_date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = [['title', 'price','customer']]
+
     def __str__(self):
         return  f"{self.id} {self.title} {self.customer.id} {self.price}"

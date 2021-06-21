@@ -6,8 +6,9 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from sellgoAPI.models import Customer
-from sellgoAPI.serializers import CustomerSerializer
+from sellgoAPI.serializers import CustomerSerializer,CsvProductSerializer
 from .csvutils import csvToModel
+
 
 @api_view( ['POST'] )
 def add_customer(request):
@@ -24,9 +25,9 @@ def add_customer(request):
         return Response( response, status=status.HTTP_200_OK )
     except:
         try:
-            name = request.POST[ 'name' ]
-            email = request.POST[ 'email' ]
-            customer_obj = Customer( name=name, email=email)
+            name = request.POST['name']
+            email = request.POST['email']
+            customer_obj = Customer( name=name, email=email )
             customer_obj.save()
             message = "Customer Created!"
             httpStatus = status.HTTP_201_CREATED
@@ -37,7 +38,7 @@ def add_customer(request):
         "message": message,
         "status": httpStatus,
         "Customer": {
-           Customer.objects.filter(email=email).values()
+            Customer.objects.filter( email=email ).values()
         }
     }
 
@@ -54,11 +55,23 @@ def uploadcsv(request):
         except Exception as e:
             message = str( e )
             httpStatus = status.HTTP_400_BAD_REQUEST
-            Response( message, status=httpStatus )
-        csvToModel(product_csv)
+            return Response( message, status=httpStatus )
+        try:
+            csvToModel( product_csv, customer=CustomerObj )
+        except Exception as e:
+            message = str( e )
+            return Response( message, status=status.HTTP_409_CONFLICT )
     except Exception as e:
         message = str( e )
-        Response(message,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response( message, status=status.HTTP_500_INTERNAL_SERVER_ERROR )
+    return Response("Product added Successfully" , status.HTTP_201_CREATED)
 
 
-    return Response("Upload Successful! ",status=status.HTTP_201_CREATED )
+@api_view( ['GET'] )
+def getproductBycustomer(request):
+    try:
+        customer_id = request.POST['customer_id']
+    except Exception as e:
+        message = str( e )
+        httpStatus = status.HTTP_404_NOT_FOUND
+        Response( message, status=httpStatus )
