@@ -57,14 +57,14 @@ def uploadcsv(request):
             httpStatus = status.HTTP_400_BAD_REQUEST
             return Response( message, status=httpStatus )
         try:
-            csvToModel( product_csv, customer=CustomerObj )
+            count = csvToModel( product_csv, customer=CustomerObj )
         except Exception as e:
             message = str( e )
             return Response( message, status=status.HTTP_409_CONFLICT )
     except Exception as e:
         message = str( e )
         return Response( message, status=status.HTTP_500_INTERNAL_SERVER_ERROR )
-    return Response("Product added Successfully" , status.HTTP_201_CREATED)
+    return Response(f"{count} Products added Successfully" , status.HTTP_201_CREATED)
 
 
 @api_view( ['GET'] )
@@ -72,12 +72,25 @@ def getproductBycustomer(request):
     try:
         customer_id = request.POST['customer_id']
         CustomerObj = Customer.objects.get(id=customer_id)
-        Products = CsvProduct.objects.filter(customer_id=customer_id).values('customer_id','customer__name','title','price','id','uploaded_date')
+        distinct_count = CsvProduct.objects.filter(customer_id=customer_id).values_list('title').distinct().count()
+        Products = CsvProduct.objects.filter(customer_id=customer_id).order_by('-uploaded_date','title')\
+            .values('id','title','price','uploaded_date')[:distinct_count]
+        product = {
+            'id',
+            'title',
+            'price',
+            'uploaded_date'
+        }
         context={
-            Products
+            "Customer":{
+                "name" : CustomerObj.name,
+                "id":CustomerObj.id
+            },
+            "Products":Products
         }
         return Response(context,status.HTTP_200_OK)
     except Exception as e:
         message = str( e )
+        print(message)
         httpStatus = status.HTTP_404_NOT_FOUND
         return Response( message, status=httpStatus )
