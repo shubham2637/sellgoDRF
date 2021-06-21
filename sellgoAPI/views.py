@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from sellgoAPI.models import Customer
+from sellgoAPI.models import Customer,CsvProduct
 from sellgoAPI.serializers import CustomerSerializer,CsvProductSerializer
 from .csvutils import csvToModel
 
@@ -71,7 +71,13 @@ def uploadcsv(request):
 def getproductBycustomer(request):
     try:
         customer_id = request.POST['customer_id']
+        CustomerObj = Customer.objects.get(id=customer_id)
+        Products = CsvProduct.objects.filter(customer_id=customer_id).values('customer_id','customer__name','title','price','id','uploaded_date')
+        context={
+            Products
+        }
+        return Response(context,status.HTTP_200_OK)
     except Exception as e:
         message = str( e )
         httpStatus = status.HTTP_404_NOT_FOUND
-        Response( message, status=httpStatus )
+        return Response( message, status=httpStatus )
